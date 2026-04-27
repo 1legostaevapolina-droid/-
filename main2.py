@@ -10,107 +10,120 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Впровадження кастомного дизайну через CSS
+# --- ОНОВЛЕНИЙ ДИЗАЙН ТА КОЛЬОРИ ---
 st.markdown("""
     <style>
-    /* Головний фон та шрифти */
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&family=Inter:wght@400;700&display=swap');
     
+    /* Головний фон додатка */
+    .stApp {
+        background-color: #0F172A; /* Дуже темний синій (Slate 900) */
+        color: #F8FAFC;
+    }
+    
+    /* Шрифт для всього тексту */
     html, body, [class*="css"] {
         font-family: 'Inter', sans-serif;
     }
-    
-    /* Стилізація бічної панелі */
-    .stSidebar {
-        background-color: #f0f2f6;
-        border-right: 2px solid #e6e9ef;
+
+    /* Стилізація бічної панелі (Sidebar) */
+    section[data-testid="stSidebar"] {
+        background-color: #1E293B; /* Темно-сірий синій (Slate 800) */
+        border-right: 1px solid #334155;
     }
     
-    /* Стилізація заголовків */
+    /* Заголовки */
     h1 {
-        color: #1E3A8A; /* Темно-синій */
-        font-weight: 700;
-        text-align: center;
-        border-bottom: 2px solid #3B82F6;
-        padding-bottom: 10px;
+        color: #38BDF8; /* Світло-блакитний (Sky 400) */
+        font-family: 'Roboto Mono', monospace;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        text-shadow: 0px 0px 10px rgba(56, 189, 248, 0.3);
     }
-    
-    /* Картки метрик */
+
+    /* Метрики */
     div[data-testid="stMetricValue"] {
-        color: #2563EB;
-        font-size: 28px;
+        color: #38BDF8 !important;
+        font-family: 'Roboto Mono', monospace;
     }
     
+    div[data-testid="stMetricLabel"] {
+        color: #94A3B8 !important;
+    }
+
     /* Кнопки */
     .stButton>button {
-        width: 100%;
-        background-color: #3B82F6;
+        background-color: #0EA5E9;
         color: white;
-        border-radius: 8px;
+        border-radius: 4px;
         border: none;
-        transition: 0.3s;
+        font-weight: bold;
+        transition: all 0.3s ease;
     }
+    
     .stButton>button:hover {
-        background-color: #1E40AF;
-        color: #ffffff;
+        background-color: #38BDF8;
+        box-shadow: 0px 0px 15px rgba(56, 189, 248, 0.5);
+        color: white;
+    }
+
+    /* Стилізація карток висновків */
+    .stAlert {
+        background-color: #1E293B;
+        border: 1px solid #334155;
+        color: #F8FAFC;
     }
     </style>
     """, unsafe_allow_html=True)
 
 def main():
-    st.markdown("<h1>System Resilience Analyzer v2.0</h1>", unsafe_allow_html=True)
+    st.markdown("<h1>Network Resilience Analysis</h1>", unsafe_allow_html=True)
     
     # --- Бічна панель (Sidebar) ---
-    st.sidebar.markdown("### ⚙️ Налаштування мережі")
+    st.sidebar.markdown("### 🛠 CONTROL PANEL")
     
-    node_count = st.sidebar.slider("Кількість вузлів інфраструктури", 5, 60, 20)
-    edge_prob = st.sidebar.slider("Щільність зв'язків", 0.05, 0.5, 0.15)
+    node_count = st.sidebar.slider("Nodes count", 5, 60, 25)
+    edge_prob = st.sidebar.slider("Link density", 0.05, 0.5, 0.12)
     
-    if 'G' not in st.session_state or st.sidebar.button("🔄 Оновити топологію"):
-        # Створення графа (моделювання мережі) [cite: 123]
-        st.session_state.G = nx.erdos_renyi_graph(n=node_count, p=edge_prob, seed=random.randint(1, 1000))
+    if 'G' not in st.session_state or st.sidebar.button("REGENERATE TOPOLOGY"):
+        st.session_state.G = nx.erdos_renyi_graph(n=node_count, p=edge_prob, seed=random.randint(1, 9999))
         st.session_state.pos = nx.spring_layout(st.session_state.G)
 
     G = st.session_state.G.copy()
     pos = st.session_state.pos
 
-    # --- Аналітичний блок (Кібербезпека) ---
-    # Визначення критичних точок артикуляції [cite: 124, 127]
+    # Алгоритм пошуку критичних вузлів
     articulation_points = set(nx.articulation_points(G))
     
     st.sidebar.markdown("---")
-    st.sidebar.markdown("### 🛡️ Симуляція інцидентів")
-    attack_mode = st.sidebar.radio("Оберіть сценарій атаки:", 
-                                  ["Моніторинг", "Випадковий збій", "Таргетована атака"])
+    st.sidebar.markdown("### ⚠️ SCENARIO SIMULATION")
+    attack_mode = st.sidebar.radio("Mode:", ["Monitoring", "Random Failure", "Targeted Attack"])
     
     nodes_to_remove = []
-    if attack_mode == "Випадковий збій":
-        fail_rate = st.sidebar.slider("Рівень деградації (%)", 0, 50, 10)
+    if attack_mode == "Random Failure":
+        fail_rate = st.sidebar.slider("Degradation %", 0, 50, 20)
         num_to_del = int(node_count * (fail_rate / 100))
         nodes_to_remove = random.sample(list(G.nodes()), min(num_to_del, len(G.nodes())))
     
-    elif attack_mode == "Таргетована атака":
-        st.sidebar.warning("Атака спрямована на точки артикуляції!")
+    elif attack_mode == "Targeted Attack":
         nodes_to_remove = list(articulation_points)
 
-    # Видалення вузлів та перерахунок метрик [cite: 166, 189]
     G.remove_nodes_from(nodes_to_remove)
 
-    # --- Основна візуалізація ---
+    # --- Метрики ---
     m_col1, m_col2, m_col3 = st.columns(3)
-    
     with m_col1:
-        st.metric("Активні вузли", G.number_of_nodes())
+        st.metric("Alive Nodes", G.number_of_nodes())
     with m_col2:
         components = nx.number_connected_components(G) if G.number_of_nodes() > 0 else 0
-        st.metric("Сегменти (Islands)", components)
+        st.metric("Sub-networks", components)
     with m_col3:
-        status = "СТІЙКА" if (G.number_of_nodes() > 0 and nx.is_connected(G)) else "КРИТИЧНА"
-        st.metric("Статус мережі", status)
+        is_ok = G.number_of_nodes() > 0 and nx.is_connected(G)
+        st.metric("System Integrity", "STABLE" if is_ok else "BREACHED")
 
-    # Побудова графіка Plotly [cite: 149, 162]
+    # --- Візуалізація Plotly ---
     edge_trace = go.Scatter(
-        x=[], y=[], line=dict(width=1.5, color='#CBD5E1'), hoverinfo='none', mode='lines'
+        x=[], y=[], line=dict(width=0.8, color='#475569'), hoverinfo='none', mode='lines'
     )
 
     for edge in G.edges():
@@ -121,7 +134,7 @@ def main():
 
     node_trace = go.Scatter(
         x=[], y=[], text=[], mode='markers', hoverinfo='text',
-        marker=dict(showscale=False, size=18, line_width=3, line_color='white')
+        marker=dict(size=16, line_width=2, line_color='#0F172A')
     )
 
     colors = []
@@ -132,11 +145,11 @@ def main():
         node_trace['y'] += (node_y,)
         
         if node in articulation_points:
-            colors.append('#EF4444') # Червоний - критичний
-            texts.append(f"Критичний вузол {node} (Точка артикуляції)")
+            colors.append('#F43F5E') # Яскравий рожево-червоний для вразливостей
+            texts.append(f"CRITICAL NODE {node}")
         else:
-            colors.append('#3B82F6') # Синій - стабільний
-            texts.append(f"Вузол {node} (Статус: OK)")
+            colors.append('#38BDF8') # Світло-блакитний для стабільних вузлів
+            texts.append(f"Node {node}")
 
     node_trace.marker.color = colors
     node_trace.text = texts
@@ -145,7 +158,7 @@ def main():
                  layout=go.Layout(
                     showlegend=False,
                     hovermode='closest',
-                    margin=dict(b=0, l=0, r=0, t=40),
+                    margin=dict(b=0, l=0, r=0, t=0),
                     xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
                     yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
                     plot_bgcolor='rgba(0,0,0,0)',
@@ -154,21 +167,14 @@ def main():
     
     st.plotly_chart(fig, use_container_width=True)
 
-    # --- Аналітичний блок ---
-    st.markdown("### 📋 Аналітичний висновок щодо безпеки")
-    
-    a_col1, a_col2 = st.columns(2)
-    with a_col1:
-        st.info(f"**Виявлені точки артикуляції:** {list(articulation_points) if articulation_points else 'Відсутні'}")
-        st.write("Це вузли, вихід з ладу яких призведе до негайної втрати зв'язності мережі[cite: 124].")
-    
-    with a_col2:
-        if nodes_to_remove:
-            st.error(f"**Наслідки атаки:** Вилучено {len(nodes_to_remove)} вузлів.")
-            if components > 1:
-                st.warning(f"Мережа фрагментована на {components} частин. Потрібне негайне відновлення маршрутів[cite: 123, 126].")
-        else:
-            st.success("Система працює в штатному режимі. Усі вузли доступні.")
+    # --- Аналітика ---
+    st.markdown("### 📊 SECURITY LOG")
+    if nodes_to_remove:
+        st.error(f"ATTACK DETECTED: {len(nodes_to_remove)} nodes offline.")
+        if components > 1:
+            st.warning(f"CRITICAL: Network fragmented into {components} segments.")
+    else:
+        st.success("STATUS: All systems nominal. No active threats.")
 
 if __name__ == "__main__":
     main()
